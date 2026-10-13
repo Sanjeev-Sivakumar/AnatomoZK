@@ -1,0 +1,65 @@
+# Environment and Security
+.env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.gemini/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Temporary test logs and traces
+*.log
+.pytest_cache/
+
+# Internal scratch, test and build artifacts
+scratch/
+demo_video_build/
+
+# Large media & video production tooling (non-core submission files)
+*.zip
+*.mp4
+*.srt
+build_demo_video.py
+rebuild_*.py
+generate_master_subtitles.py
+setup_workspace.py
+video_script.md
+documentation.md
