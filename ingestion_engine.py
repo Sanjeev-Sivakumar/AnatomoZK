@@ -104,9 +104,20 @@ class SystemEnvironment:
 
 
 def audit_environment() -> SystemEnvironment:
-    """Validates presence of required API keys from .env without exposing secrets."""
+    """Validates presence of required API keys from .env or st.secrets without exposing secrets."""
     gemini_key = os.getenv("GEMINI_API_KEY")
     groq_key = os.getenv("GROQ_API_KEY")
+
+    # Seamless fallback for Streamlit Community Cloud secrets
+    try:
+        import streamlit as st
+        if not gemini_key and "GEMINI_API_KEY" in st.secrets:
+            gemini_key = str(st.secrets["GEMINI_API_KEY"])
+        if not groq_key and "GROQ_API_KEY" in st.secrets:
+            groq_key = str(st.secrets["GROQ_API_KEY"])
+    except Exception:
+        pass
+
     return SystemEnvironment(
         gemini_api_key=gemini_key,
         groq_api_key=groq_key,
