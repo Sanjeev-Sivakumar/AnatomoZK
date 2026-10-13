@@ -57,6 +57,9 @@ demo_video_build/
 *.zip
 *.mp4
 *.srt
+*.txt
+!requirements.txt
+!packages.txt
 build_demo_video.py
 rebuild_*.py
 generate_master_subtitles.py
