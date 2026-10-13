@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import os
 import sys
+import shutil
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Set, Any, Optional
@@ -82,6 +83,11 @@ def audit_workspace_structure(root_dir: Path) -> List[AuditRecord]:
 
     for rel_path in REQUIRED_WORKSPACE_FILES:
         target_path = root_dir / rel_path
+        if rel_path == ".env" and not target_path.exists():
+            env_example = root_dir / ".env.example"
+            if env_example.exists():
+                shutil.copy(env_example, target_path)
+
         exists = target_path.exists()
         if exists:
             file_size = target_path.stat().st_size
