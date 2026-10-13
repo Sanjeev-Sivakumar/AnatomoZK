@@ -63,3 +63,7 @@ generate_master_subtitles.py
 setup_workspace.py
 video_script.md
 documentation.md
+
+# Executables
+*.exe
+cloudflared.exe
