@@ -11,7 +11,7 @@
 ---
 
 ### Quick Documentation Links
-[Comprehensive Technical Architecture Documentation](documentation.md) &bull; [Setup & 2-Minute Quickstart](#3-quickstart--2-minute-reproduction-guide) &bull; [Benchmark Evaluation Metrics](#2-benchmark-evaluation-metrics-5-fold-stratified-cross-validation) &bull; [Video Demonstration Script](video_script.md) &bull; [Synchronized Subtitles](subtitles.srt)
+[Comprehensive Technical Architecture Documentation](documentation.md) &bull; [Setup & 2-Minute Quickstart](#3-quickstart--2-minute-reproduction-guide) &bull; [Benchmark Evaluation Metrics](#2-benchmark-evaluation-metrics-5-fold-stratified-cross-validation) &bull; [System Architectural Modules](#4-system-architectural-modules) &bull; [Rubric Alignment](#5-hackathon-evaluation-rubric-alignment)
 
 ---
 
@@ -99,36 +99,69 @@ are strictly purged from the input feature tensor $\mathbf{X}$. Pre-diagnostic i
 
 ---
 
-## 3. Quickstart & 2-Minute Reproduction Guide
+## 3. Quickstart & Complete System Setup Guide
 
-### Prerequisites
-- Python 3.10, 3.11, 3.12, or 3.14
-- Standard Windows, Linux, or macOS environment
+### 3.1 System Prerequisites
+- **Python:** Version 3.10, 3.11, 3.12, 3.13, or 3.14 (64-bit recommended).
+- **Operating System:** Fully compatible with Windows 10/11, Linux (Ubuntu 20.04+, Debian, Fedora, Arch), and macOS (Intel & Apple Silicon M-series).
+- **Hardware Resources:** Minimum 4 GB RAM (8 GB recommended for smooth interactive 3D WebGL rendering); no GPU required (all neural/ensemble pipelines and 3D meshes execute locally on CPU).
+- **Web Browser:** Any modern browser with WebGL 2.0 support (Google Chrome, Mozilla Firefox, Microsoft Edge, Apple Safari).
+- **Linux Headless Dependencies (Optional):** If running on a headless Linux server or container, ensure system graphical libraries are installed:
+  ```bash
+  sudo apt-get update && sudo apt-get install -y libgl1 libglib2.0-0
+  ```
+  *(Pre-configured for cloud container deployment via `packages.txt`)*
 
-### Step 1: Clone Repository & Create Virtual Environment
+---
+
+### 3.2 Step-by-Step Installation Instructions
+
+#### Step 1: Clone Repository
 ```bash
 git clone https://github.com/Sanjeev-Sivakumar/AnatomoZK.git
 cd AnatomoZK
+```
 
-# Create and activate virtual environment
+#### Step 2: Create & Activate Virtual Environment
+**On Windows (PowerShell or Command Prompt):**
+```bash
 python -m venv venv
-# On Windows:
 .\venv\Scripts\activate
-# On Linux/macOS:
+```
+
+**On Linux / macOS (Bash or Zsh):**
+```bash
+python3 -m venv venv
 source venv/bin/activate
 ```
 
-### Step 2: Install Pinned Dependencies
+#### Step 3: Upgrade Package Installer & Install Dependencies
 ```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Step 3: Run Master Automated Verification Suite
-Run the 7-tier verification harness. Every test executes deterministically with fixed random seeds (`seed=42`):
+#### Step 4: Environment Configuration (Zero-Configuration Guarantee)
+AnatomoZK includes an automated configuration fallback. If no `.env` file exists, the application auto-initializes safe defaults from `.env.example` on initial launch. All mathematical models, 3D meshes, Byzantine consensus algorithms, and zero-knowledge SNARK verifiers operate **100% locally and deterministically** without requiring any external paid API keys or remote cloud services.
+
+To customize port or telemetry endpoints manually (optional):
+```bash
+# On Windows:
+copy .env.example .env
+# On Linux/macOS:
+cp .env.example .env
+```
+
+---
+
+### 3.3 Automated Verification & Reproducibility Suite
+
+Before launching the web application, run the automated master verification suite. This script executes a comprehensive 7-tier audit across all components deterministically with fixed random seeds (`seed=42`):
 ```bash
 python verify_submission.py
 ```
-**Expected Output:**
+
+**Expected Verification Output (7/7 Tiers Passed):**
 ```
 ============================================================================================================
                          MASTER REPRODUCIBILITY & SCIENTIFIC INTEGRITY AUDIT MATRIX                         
@@ -148,16 +181,37 @@ python verify_submission.py
 +----------------------------------------------------------------------------------------------------------+
 ```
 
-### Step 4: Launch Clinical WebGL Application
-**On Windows:** Double-click `run_app.bat` or run:
+---
+
+### 3.4 Launching the Clinical WebGL Application
+
+#### Method A: One-Click Execution Scripts
+- **Windows:** Double-click `run_app.bat` or run:
+  ```cmd
+  run_app.bat
+  ```
+- **Linux / macOS:** Run the launcher script:
+  ```bash
+  chmod +x run_app.sh
+  ./run_app.sh
+  ```
+
+#### Method B: Direct Command-Line Execution
 ```bash
 python -m streamlit run app.py
 ```
-**On Linux / macOS:** Run `chmod +x run_app.sh && ./run_app.sh` or run:
-```bash
-python3 -m streamlit run app.py
+
+The application will automatically launch and open your default web browser at:
 ```
-The application will open in your default browser at `http://localhost:8501`.
+http://localhost:8501
+```
+
+#### Method C: Headless Server / Custom Port Execution (Cloud or Remote VM)
+If deploying on a remote cloud server or if port `8501` is already in use:
+```bash
+python -m streamlit run app.py --server.port 8502 --server.headless true
+```
+
 
 ---
 
@@ -218,32 +272,58 @@ AnatomoZK/
 ├── ingestion_engine.py         # Phase 1 Multimodal Synchronized Stream Ingestor
 ├── check_assets.py             # 29-Point Pre-Flight Asset Suitability Auditor
 ├── verify_submission.py        # Master 7-Tier Automated Verification & Reproducibility Suite
-├── requirements.txt            # Pinned Production Dependencies
+├── documentation.md            # Exhaustive Technical Architecture & Cryptographic Specification
+├── requirements.txt            # Pinned Production Python Dependencies
+├── packages.txt                # System-Level Apt Packages (FreeType / OpenGL / LibGL)
 ├── run_app.bat                 # One-Click Windows Launcher (Pre-Flight + Web Dashboard)
 ├── run_app.sh                  # One-Click Linux/macOS Launcher
-├── .env.example                # Template Environment File for API Credentials
+├── .env.example                # Template Environment File for Configuration
 ├── .gitignore                  # Production Git Ignore Specifications
 ├── README.md                   # Authoritative Technical Documentation & Reproduction Guide
 ├── assets/                     # 3D Anatomical OBJ Meshes
 │   ├── whole_heart.obj         # Base Cardiac Ventricle & Myocardial Mesh (2291 Vertices)
 │   ├── MM420_LAD.obj           # Left Anterior Descending Artery (397 Vertices)
 │   ├── MM426_LCX.obj           # Left Circumflex Artery (434 Vertices)
-│   └── MM436_RCA.obj           # Right Coronary Artery (442 Vertices)
+│   ├── MM435_RCA.obj           # Right Coronary Artery Base (442 Vertices)
+│   ├── MM436_RCA.obj           # Right Coronary Artery Segment (442 Vertices)
+│   └── MM439_RCA_alt.obj       # Alternative Coronary Spline Geometry (442 Vertices)
 └── data/
     └── z_alizadeh_sani_dataset.csv # Benchmark UCI CAD Clinical Cohort (303 Records, 59 Columns)
 ```
 
 ---
 
-## 7. Official Video Demonstration Structure (Submitted to Portal)
+## 7. Interactive Clinical Interface & Functional Workflows (5 Core Tabs)
 
-The full 07:13 Full HD demonstration video (`AnatomoZK_Demo_Video.mp4`) and synchronized subtitles (`subtitles.srt`) are submitted directly via the competition portal. The demonstration is structured into six technical scenes:
-- **Scene 1 (00:00 - 01:00):** Clinical Safety Notice, 360-Degree 3D Anatomical Heart & Spatial Risk Mapping
-- **Scene 2 (01:00 - 02:00):** Multimodal Stream Ingestion & Telemetry Alignment Grid
-- **Scene 3 (02:00 - 03:00):** Machine Learning Pipeline & Target Leakage Elimination Guarantee
-- **Scene 4 (03:00 - 04:30):** Simultaneous 3D Spatial Navigation & SHAP Feature Attribution Dynamics
-- **Scene 5 (04:30 - 06:00):** Classical Byzantine Consensus Protocol ($N=4, f=1$) & Anomaly Clustering
-- **Scene 6 (06:00 - 07:13):** Zero-Knowledge SNARK Proofs, SHA-256 Merkle Ledger & Final Summary
+The AnatomoZK clinical dashboard is partitioned into five specialized operational tabs, providing full visibility across the end-to-end multimodal pipeline:
+
+- **Tab 1: 3D Coronary Risk Mapping & Interactive WebGL**
+  - Real-time parametric spline reconstruction of the left and right coronary arterial trees (LMCA, LAD, LCx, and RCA) positioned against the myocardial ventricular surface.
+  - Dynamic stenosis color interpolation: Emerald Green (<35% stenosis, nominal), Alert Amber (35% to 65% stenosis, indeterminate/ischemic watch), and Critical Crimson (>65% stenosis, severe occlusion).
+  - Programmatic 360-degree rotation, multi-angle camera perspectives (Anterior, Posterior, Left Lateral, Right Lateral), and continuous slice scrubbing across 61 temporal millisecond intervals.
+
+- **Tab 2: Multimodal Stream Ingestion & Telemetry Grid**
+  - Synchronized alignment matrix indexing 61 discrete temporal slices (t = 0 ms to t = 6000 ms, 100 ms intervals).
+  - Frame-difference optical flow variance from procedural catheter recordings.
+  - Acoustic transient RMS energy logging with procedural acoustic spike detection.
+  - Rolling Z-score telemetry tracking across systolic blood pressure, heart rate, and peripheral pulse channels.
+  - Document verification hash tracking compliance against FDA 21 CFR Part 11 trial protocol documents.
+
+- **Tab 3: Machine Learning Benchmark & Target Leakage Validation**
+  - Comprehensive 5-fold stratified cross-validation evaluation matrix displaying Accuracy, ROC-AUC, F1-Macro, Sensitivity, Specificity, and Brier calibration scores.
+  - Receiver Operating Characteristic (ROC) curves across all four vascular prediction targets: Cath (Overall CAD: 0.9285 AUC), LAD (0.8510 AUC), LCX (0.7273 AUC), and RCA (0.7225 AUC).
+  - Mathematical isolation guarantee confirming zero target leakage (|X intersect Y| = 0), ensuring post-catheterization outcomes never contaminate pre-diagnostic feature vectors.
+
+- **Tab 4: Clinical SHAP/LIME Explainability Matrix**
+  - Waterfall and beeswarm feature attributions satisfying the Cooperative Game Theoretic Efficiency Axiom (Base Risk + Sum of Phi = Predicted CAD Probability).
+  - Patient-specific biomarker attribution rankings highlighting primary risk drivers (e.g., Regional Wall Motion Abnormality, Ejection Fraction, Typical Chest Pain, Age, Diabetes Mellitus).
+  - Guideline-grounded clinical narrative generation translating quantitative attribution weights into actionable cardiology consultation summaries.
+
+- **Tab 5: Byzantine Fault Tolerance & Zero-Knowledge Ledger**
+  - Classical Practical Byzantine Fault Tolerance (PBFT) consensus state console monitoring 4 independent validator nodes with 1 tolerated faulty Byzantine actor (Quorum >= 75%).
+  - Automated transducer glitch detection and fault override handling, maintaining telemetry availability during isolated sensor drops.
+  - Coincident multi-sensor fraud cluster detection (Cluster CC-006 at t = 2500 ms) identifying correlated tampering across optical and telemetry channels.
+  - BN254 prime field Groth16 zk-SNARK proof verification and SHA-256 binary Merkle tree ledger anchoring all 61 temporal prediction blocks.
 
 ---
 
