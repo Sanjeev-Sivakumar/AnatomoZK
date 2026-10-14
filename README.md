@@ -10,6 +10,11 @@
 
 ---
 
+### Quick Documentation Links
+[Comprehensive Technical Architecture Documentation](documentation.md) &bull; [Setup & 2-Minute Quickstart](#3-quickstart--2-minute-reproduction-guide) &bull; [Benchmark Evaluation Metrics](#2-benchmark-evaluation-metrics-5-fold-stratified-cross-validation) &bull; [Video Demonstration Script](video_script.md) &bull; [Synchronized Subtitles](subtitles.srt)
+
+---
+
 ### Mandatory Clinical Safety Notice
 > **CLINICAL INVESTIGATIONAL DISCLAIMER:**  
 > AnatomoZK is an advanced decision-support research architecture designed exclusively for investigational cardiology and multimodal clinical trial telemetry integrity. All 3D spatial reconstructions, machine learning inference scores, and zero-knowledge proofs must be reviewed alongside gold-standard invasive catheter angiography by certified cardiology specialists. This system does not replace primary physician diagnostic authority.

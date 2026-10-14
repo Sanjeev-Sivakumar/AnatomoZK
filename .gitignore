@@ -53,20 +53,19 @@ Thumbs.db
 scratch/
 demo_video_build/
 
-# Large media & video production tooling (non-core submission files)
+# Large media & video production tooling (video submitted via portal)
 *.zip
 *.mp4
-*.srt
-*.txt
-!requirements.txt
-!packages.txt
-build_demo_video.py
-rebuild_*.py
-generate_master_subtitles.py
-setup_workspace.py
-video_script.md
-documentation.md
-
-# Executables
 *.exe
 cloudflared.exe
+*.srt
+*.txt
+AnatomoZK_Demo_Video.*
+
+# Ensure canonical documentation and text assets are tracked
+!documentation.md
+!video_script.md
+!subtitles.srt
+!subtitles.txt
+!requirements.txt
+!packages.txt
