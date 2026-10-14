@@ -224,9 +224,9 @@ python -m streamlit run app.py --server.port 8502 --server.headless true
 ### 4.1 3D Coronary Risk Mapping & Interactive WebGL (`app.py`)
 - **Parametric Spline Architecture:** Continuous mathematical coronary paths for LMCA, LAD, LCx, and RCA vascular territories mapped in millimeter anatomical coordinates.
 - **Dynamic Stenosis Color Ramp:**
-  - Nominal ($P < 35\%$): Emerald Green (`#00e676`)
-  - Intermediate / Indeterminate ($35\% \le P \le 65\%$): Alert Amber (`#ffd600`)
-  - Ischemic / Severe Occlusion ($P > 65\%$): Critical Crimson (`#ff1744`)
+  - Nominal ($P < 0.35$, <35%): Emerald Green (`#00e676`)
+  - Intermediate / Indeterminate ($0.35 \le P \le 0.65$, 35% to 65%): Alert Amber (`#ffd600`)
+  - Ischemic / Severe Occlusion ($P > 0.65$, >65%): Critical Crimson (`#ff1744`)
 - **Programmatic 360-Degree Camera Rotation & Zoom:** Responsive WebGL orbit and zoom animation displaying coronary arterial bifurcations.
 - **Interactive Temporal Timeline:** 61 discrete millisecond slices ($t = 0\text{ ms}$ to $t = 6000\text{ ms}$) synchronized between 3D heart risk mapping, SHAP waterfall attributions, and Byzantine ledger status.
 
@@ -238,17 +238,14 @@ python -m streamlit run app.py --server.port 8502 --server.headless true
 - **Resilient Edge Heuristic Fallbacks:** Deterministic local execution guaranteed even if offline or if remote API quotas are exhausted.
 
 ### 4.3 Temporal Byzantine Fault Tolerance Engine (`consensus_matrix.py`)
-- **Protocol:** Classical Byzantine Agreement ($N = 4$ validators, $f = 1$ tolerated faulty node, Quorum $\ge 75\%$).
+- **Protocol:** Classical Byzantine Agreement ($N = 4$ validators, $f = 1$ tolerated faulty node, Quorum $\ge 0.75$ (75%)).
 - **State Vector Mapping:** $\Phi(t) \in \{+1, 0, -1\}$ (Nominal, Ambiguous, Fraud).
 - **Automated Fault Overrides:** When an isolated sensor glitches (e.g., telemetry electrode detachment), 3-node quorum overrides the anomaly and preserves system availability.
 - **Coincidence Clustering:** Cross-modal temporal windowing ($|\Delta t| \le 150\text{ ms}$) detects coordinated multi-sensor fraud surges (e.g., Cluster CC-006 at $t = 2500\text{ ms}$ where optical cut coincides with acute telemetry step-change).
 
 ### 4.4 Zero-Knowledge Privacy & Merkle Tree (`zk_trust_layer.py`)
 - **Curve & Arithmetic Field:** Alt-BN128 / BN254 prime field ($p \approx 2.188 \times 10^{77}$).
-- **Rank-1 Constraint Systems (R1CS):** Enforces medical safety ceilings without exposing private biometric integers:
-  $$
-\text{Slack} = \text{Safety Ceil} - \text{Patient Metric} \ge 0
-$$
+- **Rank-1 Constraint Systems (R1CS):** Enforces medical safety ceilings without exposing private biometric integers: $\text{Slack} = \text{Safety Ceil} - \text{Patient Metric} \ge 0$.
 - **Groth16 Pairing Simulation:** Generates $\pi_A \in \mathbb{G}_1, \pi_B \in \mathbb{G}_2, \pi_C \in \mathbb{G}_1$ with Fiat-Shamir heuristic transcript digest in $< 0.05\text{ ms}$ per proof.
 - **SHA-256 Merkle Prediction State Tree:** Anchors all 61 temporal prediction blocks. Post-computation coordinate tampering or probability alteration breaks the Merkle root hash.
 

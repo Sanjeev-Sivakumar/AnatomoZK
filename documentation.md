@@ -109,7 +109,7 @@ represent the invasive gold-standard ground truths determined during catheteriza
                      +--------------------------------->  X intersect Y_targets = EMPTY SET
 ```
 
-If any column in $\mathbf{Y}_{\text{target}}$ remains in feature matrix $\mathbf{X}$, the model learns trivial circular mappings (e.g., mapping $\text{LAD} \to \text{Cath}$ with $>98\%$ artificial accuracy), causing complete failure during real-world clinical triage.
+If any column in $\mathbf{Y}_{\text{target}}$ remains in feature matrix $\mathbf{X}$, the model learns trivial circular mappings (e.g., mapping $\text{LAD} \to \text{Cath}$ with $> 98$% artificial accuracy), causing complete failure during real-world clinical triage.
 
 The `TargetLeakagePurgeFilter` enforces a strict isolation boundary:
 
@@ -151,30 +151,47 @@ $$
 
 #### 3.1 Multi-Output Probability Formulation
 Unlike legacy binary classifiers that output a single generic CAD score, Track A demands spatial resolution across the coronary vascular tree. The pipeline formulates a multi-output probabilistic mapping:
+
 $$
 f_{\mathbf{\Theta}}: \mathbb{R}^{54} \longrightarrow [0, 1]^4
 $$
 
 $$
-\mathbf{x} \mapsto \begin{bmatrix} P(\text{Overall CAD} \mid \mathbf{x}) \\ P(\text{LAD Stenosis} \ge 50\% \mid \mathbf{x}) \\ P(\text{LCX Stenosis} \ge 50\% \mid \mathbf{x}) \\ P(\text{RCA Stenosis} \ge 50\% \mid \mathbf{x}) \end{bmatrix}
+\mathbf{x} \mapsto [P_{\text{Cath}}(\mathbf{x}), \, P_{\text{LAD}}(\mathbf{x}), \, P_{\text{LCX}}(\mathbf{x}), \, P_{\text{RCA}}(\mathbf{x})]^T
 $$
+
+where each coronary vascular territory target represents an independent conditional probability:
+- $P_{\text{Cath}}(\mathbf{x}) = P(\text{Overall CAD} \mid \mathbf{x})$: Probability of significant coronary artery disease.
+- $P_{\text{LAD}}(\mathbf{x}) = P(\text{LAD Stenosis} \ge 0.50 \mid \mathbf{x})$: Probability of occlusion in the Left Anterior Descending artery.
+- $P_{\text{LCX}}(\mathbf{x}) = P(\text{LCX Stenosis} \ge 0.50 \mid \mathbf{x})$: Probability of occlusion in the Left Circumflex artery.
+- $P_{\text{RCA}}(\mathbf{x}) = P(\text{RCA Stenosis} \ge 0.50 \mid \mathbf{x})$: Probability of occlusion in the Right Coronary artery.
 
 #### 3.2 Calibrated Ensemble Architecture
 For each vascular target $v \in \{\text{Cath}, \text{LAD}, \text{LCX}, \text{RCA}\}$, an independent heterogeneous soft-voting ensemble combines three distinct structural inductive biases:
-1. **LightGBM Gradient Boosting:** Optimized for non-linear tabular interactions and handling collinearity between metabolic biomarkers (LDL, TG, FBS):
-   $$
+
+**Model 1: LightGBM Gradient Boosting**  
+Optimized for non-linear tabular interactions and handling collinearity between metabolic biomarkers (LDL, TG, FBS):
+
+$$
 \hat{y}_{\text{LGBM}} = \sum_{k=1}^K f_k(\mathbf{x}), \quad f_k \in \mathcal{F}
 $$
-2. **Balanced Random Forest:** Uses 120 randomized decision trees with bootstrap class-weight balancing to counteract anatomical class imbalance (LAD stenosis is significantly more prevalent than isolated LCX stenosis):
-   $$
+
+**Model 2: Balanced Random Forest**  
+Uses 120 randomized decision trees with bootstrap class-weight balancing to counteract anatomical class imbalance (LAD stenosis is significantly more prevalent than isolated LCX stenosis):
+
+$$
 w_c = \frac{N}{2 \cdot N_c}
 $$
-3. **L2-Regularized Logistic Regression:** Provides smooth, well-calibrated baseline log-odds preventing tree overconfidence:
-   $$
+
+**Model 3: L2-Regularized Logistic Regression**  
+Provides smooth, well-calibrated baseline log-odds preventing tree overconfidence:
+
+$$
 P_{\text{LR}}(y=1 \mid \mathbf{x}) = \frac{1}{1 + \exp(-(\mathbf{w}^T \mathbf{x} + b))}
 $$
 
 The final calibrated output probability is given by:
+
 $$
 P_v(\mathbf{x}) = w_1 P_{v, \text{LGBM}}(\mathbf{x}) + w_2 P_{v, \text{RF}}(\mathbf{x}) + w_3 P_{v, \text{LR}}(\mathbf{x})
 $$
@@ -222,8 +239,12 @@ To provide interpretable feature explanations, the system implements local featu
 ```
 
 The Shapley values satisfy the efficiency axiom:
-$$E[f(\mathbf{x})] + \sum_{j=1}^M \phi_j(\mathbf{x}) = f(\mathbf{x})$$
-where $E[f(\mathbf{x})] = 15.00\%$ is the baseline population risk, and $\sum \phi_j$ equals the model output probability $f(\mathbf{x}) = 89.50\%$ at $t = 2500\text{ ms}$, ensuring complete mathematical consistency between local explanations and global risk estimates.
+
+$$
+E[f(\mathbf{x})] + \sum_{j=1}^M \phi_j(\mathbf{x}) = f(\mathbf{x})
+$$
+
+where $E[f(\mathbf{x})] = 0.1500$ (15.00%) is the baseline population risk, and the attribution sum equals the model output probability $f(\mathbf{x}) = 0.8950$ (89.50%) at $t = 2500\text{ ms}$, ensuring complete mathematical consistency between local explanations and global risk estimates.
 
 ---
 
@@ -279,7 +300,7 @@ $$
 where $N_{i, 3}(u)$ are the cubic B-spline basis functions evaluated via the de Boor recurrence algorithm. This produces 30 to 80 high-density vertices per vessel segment, preventing angular discontinuities during 3D rotations.
 
 #### 4.3 Dynamic Color Interpolation Function
-Stenosis probabilities ($0.0\%$ to $100.0\%$) are mapped to a continuous color scale:
+Stenosis probabilities (0.0% to 100.0%) are mapped to a continuous color scale:
 $$
 \mathbf{C}(s) = \begin{cases} 
 \left(1 - \frac{s}{0.35}\right) \mathbf{C}_{\text{nominal}} + \left(\frac{s}{0.35}\right) \mathbf{C}_{\text{light-green}}, & 0.0 \le s < 0.35 \quad (\text{Nominal Perfusion}) \\
@@ -339,8 +360,10 @@ $$
 where $N = 4$ independent modal nodes tolerate $f = 1$ faulty or malicious node. The required quorum agreement threshold is:
 
 $$
-\Theta = \frac{N - f}{N} = \frac{4 - 1}{4} = 75.0\%
+\Theta = \frac{N - f}{N} = \frac{4 - 1}{4} = 0.75
 $$
+
+corresponding to a 75.0% supermajority agreement quorum threshold.
 
 #### 5.3 Mathematical Vector State Encoding
 For each millisecond bin $t \in [0, 6000]$, the discrete state verdicts are mapped to scalar values:
@@ -361,9 +384,9 @@ $$
 $$
 
 #### 5.4 Operational Divergence Scenarios
-1. **Unanimous Agreement ($\delta = 0.0$, Quorum $= 100\%$):** All four modalities report identical states. System proceeds with conflict severity `NONE`.
-2. **Isolated Transducer Fault ($\delta = 0.25$, Quorum $= 75\%$):** Observed at $t = 1400\text{ ms}$. Telemetry reports an anomalous Z-score spike ($Z = 3.42$, indicating `FRAUD_SUSPECTED`), while Vision, Acoustic, and Compliance report `NOMINAL`. The BFT engine identifies an `ISOLATED_TRANSDUCER_FAULT`, isolates the telemetry node, triggers a consensus quorum override, and maintains the verified session state as `NOMINAL`.
-3. **Coordinated Multi-Modal Breach ($\delta = 0.0$, Quorum $= 100\%$):** Observed at $t = 2500\text{ ms}$ (Coincidence Cluster `CC-007`). Optical flow surges, acoustic stress spikes, and telemetry confirms acute tachycardia ($104\text{ BPM}$) and hypertension ($158/94\text{ mmHg}$). All modalities agree on `FRAUD_SUSPECTED`, triggering a confirmed ischemic alert without Byzantine override.
+1. **Unanimous Agreement ($\delta = 0.0$, Quorum = 100%):** All four modalities report identical states. System proceeds with conflict severity `NONE`.
+2. **Isolated Transducer Fault ($\delta = 0.25$, Quorum = 75%):** Observed at $t = 1400\text{ ms}$. Telemetry reports an anomalous Z-score spike ($Z = 3.42$, indicating `FRAUD_SUSPECTED`), while Vision, Acoustic, and Compliance report `NOMINAL`. The BFT engine identifies an `ISOLATED_TRANSDUCER_FAULT`, isolates the telemetry node, triggers a consensus quorum override, and maintains the verified session state as `NOMINAL`.
+3. **Coordinated Multi-Modal Breach ($\delta = 0.0$, Quorum = 100%):** Observed at $t = 2500\text{ ms}$ (Coincidence Cluster `CC-007`). Optical flow surges, acoustic stress spikes, and telemetry confirms acute tachycardia ($104\text{ BPM}$) and hypertension ($158/94\text{ mmHg}$). All modalities agree on `FRAUD_SUSPECTED`, triggering a confirmed ischemic alert without Byzantine override.
 
 ---
 
@@ -445,8 +468,10 @@ The prover outputs a `ZKProofToken` containing curve elements:
 - $\pi_A \in \mathbb{G}_1$ (64-byte coordinate)
 - $\pi_B \in \mathbb{G}_2$ (128-byte coordinate)
 - $\pi_C \in \mathbb{G}_1$ (64-byte coordinate)
-- Fiat-Shamir transcript hash:
-  $$
+
+Fiat-Shamir transcript hash calculation:
+
+$$
 H_{\text{FS}} = \text{SHA-256}(\text{Proof-ID} \parallel \text{Zone-ID} \parallel \mathbf{x} \parallel \pi_A \parallel \pi_B \parallel \pi_C \parallel \mathcal{D})
 $$
 
@@ -459,7 +484,7 @@ This guarantees threshold compliance without exposing raw physiological integers
 #### 6.4 Binary Merkle Prediction State Tree
 To prevent retroactive manipulation of predicted stenosis probabilities or anatomical coordinates, every prediction point is compiled into a SHA-256 Merkle leaf:
 $$
-L_i = \text{SHA-256}(\text{PT:}i \parallel \text{T:}t \parallel \text{XYZ:}(x,y,z) \parallel \text{CAD:}c\% \parallel \text{V:}v \parallel \text{ZONE:}z)
+L_i = \text{SHA-256}(\text{PT:}i \parallel \text{T:}t \parallel \text{XYZ:}(x,y,z) \parallel \text{CAD:}c \parallel \text{V:}v \parallel \text{ZONE:}z)
 $$
 
 ```
