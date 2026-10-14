@@ -112,21 +112,37 @@ represent the invasive gold-standard ground truths determined during catheteriza
 If any column in $\mathbf{Y}_{\text{target}}$ remains in feature matrix $\mathbf{X}$, the model learns trivial circular mappings (e.g., mapping $\text{LAD} \to \text{Cath}$ with $>98\%$ artificial accuracy), causing complete failure during real-world clinical triage.
 
 The `TargetLeakagePurgeFilter` enforces a strict isolation boundary:
-$$\mathbf{X} = \mathbf{D} \setminus \mathcal{L}$$
-where $\mathcal{L} = \{\text{Cath}, \text{Cath\_Encoded}, \text{LAD}, \text{LCX}, \text{RCA}, \text{CAD}, \text{CAD\_Status}, \text{Target}, \text{Stenosis\_Outcome}\}$.
 
-The verification assertion:
-$$\mathbf{X}_{\text{clean}} \cap \mathcal{L} = \emptyset \quad \text{and} \quad \dim(\mathbf{X}_{\text{clean}})[1] = 54$$
+$$
+\mathbf{X} = \mathbf{D} \setminus \mathcal{L}
+$$
+
+where the leakage set $\mathcal{L}$ is defined as:
+
+$$
+\mathcal{L} = \{ \text{Cath}, \text{Cath-Encoded}, \text{LAD}, \text{LCX}, \text{RCA}, \text{CAD}, \text{CAD-Status}, \text{Target}, \text{Stenosis-Outcome} \}
+$$
+
+The mathematical verification assertion:
+
+$$
+\mathbf{X}_{\text{clean}} \cap \mathcal{L} = \emptyset \quad \text{and} \quad \dim(\mathbf{X}_{\text{clean}})[1] = 54
+$$
+
 is programmatically enforced prior to model parameter updates.
 
 #### 2.3 Preprocessing & Normalization Pipeline
 1. **Missing Value Imputation:**
    Numerical variables are imputed using median estimation:
-   $$\hat{x}_j = \text{median}(\{x_{i,j} \mid x_{i,j} \ne \text{NaN}\})$$
+   $$
+\hat{x}_j = \text{median}(\{x_{i,j} \mid x_{i,j} \ne \text{NaN}\})
+$$
    Binary clinical flags are imputed using the mode.
 2. **Robust Feature Scaling:**
    Cardiovascular laboratory values exhibit acute right-skewed tails during myocardial infarction (e.g., extreme ESR or Fasting Blood Sugar surges). Standard Z-score normalization is vulnerable to sample mean distortion by extreme outliers. We implement Robust Interquartile Scaling:
-   $$z_{i,j} = \frac{x_{i,j} - Q_2(x_j)}{Q_3(x_j) - Q_1(x_j)}$$
+   $$
+z_{i,j} = \frac{x_{i,j} - Q_2(x_j)}{Q_3(x_j) - Q_1(x_j)}
+$$
    where $Q_1, Q_2, Q_3$ represent the 25th, 50th (median), and 75th percentiles of feature $j$.
 
 ---
@@ -135,20 +151,33 @@ is programmatically enforced prior to model parameter updates.
 
 #### 3.1 Multi-Output Probability Formulation
 Unlike legacy binary classifiers that output a single generic CAD score, Track A demands spatial resolution across the coronary vascular tree. The pipeline formulates a multi-output probabilistic mapping:
-$$f_{\mathbf{\Theta}}: \mathbb{R}^{54} \longrightarrow [0, 1]^4$$
-$$\mathbf{x} \mapsto \begin{bmatrix} P(\text{Overall CAD} \mid \mathbf{x}) \\ P(\text{LAD Stenosis} \ge 50\% \mid \mathbf{x}) \\ P(\text{LCX Stenosis} \ge 50\% \mid \mathbf{x}) \\ P(\text{RCA Stenosis} \ge 50\% \mid \mathbf{x}) \end{bmatrix}$$
+$$
+f_{\mathbf{\Theta}}: \mathbb{R}^{54} \longrightarrow [0, 1]^4
+$$
+
+$$
+\mathbf{x} \mapsto \begin{bmatrix} P(\text{Overall CAD} \mid \mathbf{x}) \\ P(\text{LAD Stenosis} \ge 50\% \mid \mathbf{x}) \\ P(\text{LCX Stenosis} \ge 50\% \mid \mathbf{x}) \\ P(\text{RCA Stenosis} \ge 50\% \mid \mathbf{x}) \end{bmatrix}
+$$
 
 #### 3.2 Calibrated Ensemble Architecture
 For each vascular target $v \in \{\text{Cath}, \text{LAD}, \text{LCX}, \text{RCA}\}$, an independent heterogeneous soft-voting ensemble combines three distinct structural inductive biases:
 1. **LightGBM Gradient Boosting:** Optimized for non-linear tabular interactions and handling collinearity between metabolic biomarkers (LDL, TG, FBS):
-   $$\hat{y}_{\text{LGBM}} = \sum_{k=1}^K f_k(\mathbf{x}), \quad f_k \in \mathcal{F}$$
+   $$
+\hat{y}_{\text{LGBM}} = \sum_{k=1}^K f_k(\mathbf{x}), \quad f_k \in \mathcal{F}
+$$
 2. **Balanced Random Forest:** Uses 120 randomized decision trees with bootstrap class-weight balancing to counteract anatomical class imbalance (LAD stenosis is significantly more prevalent than isolated LCX stenosis):
-   $$w_c = \frac{N}{2 \cdot N_c}$$
+   $$
+w_c = \frac{N}{2 \cdot N_c}
+$$
 3. **L2-Regularized Logistic Regression:** Provides smooth, well-calibrated baseline log-odds preventing tree overconfidence:
-   $$P_{\text{LR}}(y=1 \mid \mathbf{x}) = \frac{1}{1 + \exp(-(\mathbf{w}^T \mathbf{x} + b))}$$
+   $$
+P_{\text{LR}}(y=1 \mid \mathbf{x}) = \frac{1}{1 + \exp(-(\mathbf{w}^T \mathbf{x} + b))}
+$$
 
 The final calibrated output probability is given by:
-$$P_v(\mathbf{x}) = w_1 P_{v, \text{LGBM}}(\mathbf{x}) + w_2 P_{v, \text{RF}}(\mathbf{x}) + w_3 P_{v, \text{LR}}(\mathbf{x})$$
+$$
+P_v(\mathbf{x}) = w_1 P_{v, \text{LGBM}}(\mathbf{x}) + w_2 P_{v, \text{RF}}(\mathbf{x}) + w_3 P_{v, \text{LR}}(\mathbf{x})
+$$
 with equal voting weights $w_1 = w_2 = w_3 = \frac{1}{3}$.
 
 #### 3.3 5-Fold Stratified Cross-Validation Benchmark Results
@@ -244,20 +273,24 @@ Human coronary arteries follow tortuous paths along the epicardial sulci of the 
 
 #### 4.2 Continuous Parametric Spline Generation
 For each coronary branch, a set of ordered control points $\mathbf{P}_0, \mathbf{P}_1, \dots, \mathbf{P}_m$ is parameterized by normalized path distance $u \in [0, 1]$. Continuous coordinates are synthesized using cubic B-splines:
-$$\mathbf{C}(u) = \sum_{i=0}^m N_{i, 3}(u) \mathbf{P}_i$$
+$$
+\mathbf{C}(u) = \sum_{i=0}^m N_{i, 3}(u) \mathbf{P}_i
+$$
 where $N_{i, 3}(u)$ are the cubic B-spline basis functions evaluated via the de Boor recurrence algorithm. This produces 30 to 80 high-density vertices per vessel segment, preventing angular discontinuities during 3D rotations.
 
 #### 4.3 Dynamic Color Interpolation Function
 Stenosis probabilities ($0.0\%$ to $100.0\%$) are mapped to a continuous color scale:
-$$\mathbf{C}(s) = \begin{cases} 
-\left(1 - \frac{s}{0.35}\right) \mathbf{C}_{\text{nominal}} + \left(\frac{s}{0.35}\right) \mathbf{C}_{\text{light\_green}}, & 0.0 \le s < 0.35 \quad (\text{Nominal Perfusion}) \\
+$$
+\mathbf{C}(s) = \begin{cases} 
+\left(1 - \frac{s}{0.35}\right) \mathbf{C}_{\text{nominal}} + \left(\frac{s}{0.35}\right) \mathbf{C}_{\text{light-green}}, & 0.0 \le s < 0.35 \quad (\text{Nominal Perfusion}) \\
 \left(1 - \frac{s - 0.35}{0.30}\right) \mathbf{C}_{\text{yellow}} + \left(\frac{s - 0.35}{0.30}\right) \mathbf{C}_{\text{orange}}, & 0.35 \le s < 0.65 \quad (\text{Ambiguous Stenosis}) \\
 \left(1 - \frac{s - 0.65}{0.35}\right) \mathbf{C}_{\text{red}} + \left(\frac{s - 0.65}{0.35}\right) \mathbf{C}_{\text{crimson}}, & 0.65 \le s \le 1.00 \quad (\text{Ischemia / Critical})
-\end{cases}$$
+\end{cases}
+$$
 
 Color Coordinate Assignments:
 - $\mathbf{C}_{\text{nominal}} = \text{\#107c41}$ (Forest Green)
-- $\mathbf{C}_{\text{light\_green}} = \text{\#22c55e}$ (Bright Green)
+- $\mathbf{C}_{\text{light-green}} = \text{\#22c55e}$ (Bright Green)
 - $\mathbf{C}_{\text{yellow}} = \text{\#eab308}$ (Amber Yellow)
 - $\mathbf{C}_{\text{orange}} = \text{\#f97316}$ (Warning Orange)
 - $\mathbf{C}_{\text{red}} = \text{\#dc2626}$ (Ischemia Crimson)
@@ -299,19 +332,33 @@ AnatomoZK addresses this by treating distinct raw modalities as independent, pot
 
 #### 5.2 Classical BFT Quorum Heuristic
 The consensus engine enforces the classical Byzantine Fault Tolerance constraint:
-$$N \ge 3f + 1$$
+$$
+N \ge 3f + 1
+$$
+
 where $N = 4$ independent modal nodes tolerate $f = 1$ faulty or malicious node. The required quorum agreement threshold is:
-$$\Theta = \frac{N - f}{N} = \frac{4 - 1}{4} = 75.0\%$$
+
+$$
+\Theta = \frac{N - f}{N} = \frac{4 - 1}{4} = 75.0\%
+$$
 
 #### 5.3 Mathematical Vector State Encoding
 For each millisecond bin $t \in [0, 6000]$, the discrete state verdicts are mapped to scalar values:
-$$\phi(s) = \begin{cases} +1.0, & s = \text{NOMINAL} \\ 0.0, & s = \text{AMBIGUOUS} \\ -1.0, & s = \text{FRAUD\_SUSPECTED} \end{cases}$$
+$$
+\phi(s) = \begin{cases} +1.0, & s = \text{NOMINAL} \\ 0.0, & s = \text{AMBIGUOUS} \\ -1.0, & s = \text{FRAUD-SUSPECTED} \end{cases}
+$$
 
 The state signature vector $\mathbf{v}(t) = [\phi_1(t), \phi_2(t), \phi_3(t), \phi_4(t)]$ is evaluated for empirical mean and variance:
-$$\mu_{\mathbf{v}}(t) = \frac{1}{4} \sum_{i=1}^4 \phi_i(t), \quad \sigma_{\mathbf{v}}^2(t) = \frac{1}{4} \sum_{i=1}^4 (\phi_i(t) - \mu_{\mathbf{v}}(t))^2$$
+
+$$
+\mu_{\mathbf{v}}(t) = \frac{1}{4} \sum_{i=1}^4 \phi_i(t), \quad \sigma_{\mathbf{v}}^2(t) = \frac{1}{4} \sum_{i=1}^4 (\phi_i(t) - \mu_{\mathbf{v}}(t))^2
+$$
 
 The disagreement ratio is defined as:
-$$\delta(t) = \frac{\sum_{i=1}^4 \mathbb{I}(\phi_i(t) \ne \text{mode}(\mathbf{v}(t)))}{4}$$
+
+$$
+\delta(t) = \frac{\sum_{i=1}^4 \mathbb{I}(\phi_i(t) \ne \text{mode}(\mathbf{v}(t)))}{4}
+$$
 
 #### 5.4 Operational Divergence Scenarios
 1. **Unanimous Agreement ($\delta = 0.0$, Quorum $= 100\%$):** All four modalities report identical states. System proceeds with conflict severity `NONE`.
@@ -324,7 +371,10 @@ $$\delta(t) = \frac{\sum_{i=1}^4 \mathbb{I}(\phi_i(t) \ne \text{mode}(\mathbf{v}
 
 #### 6.1 Cryptographic Foundation: BN254 Prime Field
 To comply with HIPAA Title II and GDPR Article 9 requirements regarding protected health information (PHI), AnatomoZK verifies clinical thresholds without exposing raw biometric values to remote browser contexts. Computations are executed over the Barreto-Naehrig scalar field curve (Alt-BN128 / BN254):
-$$p = 21888242871839275222246405745257275088548364400416034343698204186575808495617$$
+$$
+p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+$$
+
 with 254-bit cryptographic security.
 
 ```
@@ -365,21 +415,29 @@ with 254-bit cryptographic security.
 
 #### 6.2 R1CS Arithmetic Circuit & Slack Variable Decomposition
 The circuit evaluates five physiological safety boundaries:
-1. Heart Rate Ceiling: $w_{\text{HR}} \le x_{\text{max\_HR}}$
-2. Systolic Blood Pressure Ceiling: $w_{\text{SBP}} \le x_{\text{max\_SBP}}$
-3. Oxygen Saturation Floor: $w_{\text{SpO2}} \ge x_{\text{min\_SpO2}}$
-4. Kinetic Tremor Ceiling: $w_{\text{Tremor}} \le x_{\text{max\_Tremor}}$
-5. CAD Risk Critical Ceiling: $w_{\text{CAD}} \le x_{\text{max\_CAD}}$
+1. Heart Rate Ceiling: $w_{\text{HR}} \le x_{\text{max-HR}}$
+2. Systolic Blood Pressure Ceiling: $w_{\text{SBP}} \le x_{\text{max-SBP}}$
+3. Oxygen Saturation Floor: $w_{\text{SpO2}} \ge x_{\text{min-SpO2}}$
+4. Kinetic Tremor Ceiling: $w_{\text{Tremor}} \le x_{\text{max-Tremor}}$
+5. CAD Risk Critical Ceiling: $w_{\text{CAD}} \le x_{\text{max-CAD}}$
 
 Continuous values are scaled to fixed-point integers ($\times 100$) and mapped to slack constraints:
-$$s_{\text{HR}} = x_{\text{max\_HR}} - w_{\text{HR}} \ge 0$$
-$$s_{\text{SBP}} = x_{\text{max\_SBP}} - w_{\text{SBP}} \ge 0$$
-$$s_{\text{SpO2}} = w_{\text{SpO2}} - x_{\text{min\_SpO2}} \ge 0$$
-$$s_{\text{Tremor}} = x_{\text{max\_Tremor}} - w_{\text{Tremor}} \ge 0$$
-$$s_{\text{CAD}} = x_{\text{max\_CAD}} - w_{\text{CAD}} \ge 0$$
+
+$$
+\begin{aligned}
+s_{\text{HR}} &= x_{\text{max-HR}} - w_{\text{HR}} \ge 0 \\
+s_{\text{SBP}} &= x_{\text{max-SBP}} - w_{\text{SBP}} \ge 0 \\
+s_{\text{SpO2}} &= w_{\text{SpO2}} - x_{\text{min-SpO2}} \ge 0 \\
+s_{\text{Tremor}} &= x_{\text{max-Tremor}} - w_{\text{Tremor}} \ge 0 \\
+s_{\text{CAD}} &= x_{\text{max-CAD}} - w_{\text{CAD}} \ge 0
+\end{aligned}
+$$
 
 If any limit is violated, the slack wraps around the prime field ($p - |s|$), creating an algebraic defect:
-$$\mathcal{D} = \sum_{k} |s_k| \cdot \mathbb{I}(s_k < 0)$$
+
+$$
+\mathcal{D} = \sum_{k} |s_k| \cdot \mathbb{I}(s_k < 0)
+$$
 When $\mathcal{D} > 0$, the quotient polynomial $H(x)$ cannot divide the target polynomial $T(x)$, causing proof verification to fail.
 
 #### 6.3 Groth16 zk-SNARK Pairing Verification
@@ -388,15 +446,21 @@ The prover outputs a `ZKProofToken` containing curve elements:
 - $\pi_B \in \mathbb{G}_2$ (128-byte coordinate)
 - $\pi_C \in \mathbb{G}_1$ (64-byte coordinate)
 - Fiat-Shamir transcript hash:
-  $$H_{\text{FS}} = \text{SHA-256}(\text{Proof\_ID} \parallel \text{Zone\_ID} \parallel \mathbf{x} \parallel \pi_A \parallel \pi_B \parallel \pi_C \parallel \mathcal{D})$$
+  $$
+H_{\text{FS}} = \text{SHA-256}(\text{Proof-ID} \parallel \text{Zone-ID} \parallel \mathbf{x} \parallel \pi_A \parallel \pi_B \parallel \pi_C \parallel \mathcal{D})
+$$
 
 The autonomous `ZKVerifier` validates threshold compliance using the bilinear pairing equation:
-$$e(\pi_A, \pi_B) = e(\alpha, \beta) \cdot e(\mathbf{x}, \gamma) \cdot e(\pi_C, \delta)$$
+$$
+e(\pi_A, \pi_B) = e(\alpha, \beta) \cdot e(\mathbf{x}, \gamma) \cdot e(\pi_C, \delta)
+$$
 This guarantees threshold compliance without exposing raw physiological integers.
 
 #### 6.4 Binary Merkle Prediction State Tree
 To prevent retroactive manipulation of predicted stenosis probabilities or anatomical coordinates, every prediction point is compiled into a SHA-256 Merkle leaf:
-$$L_i = \text{SHA-256}(\text{PT:}i \parallel \text{T:}t \parallel \text{XYZ:}(x,y,z) \parallel \text{CAD:}c\% \parallel \text{V:}v \parallel \text{ZONE:}z)$$
+$$
+L_i = \text{SHA-256}(\text{PT:}i \parallel \text{T:}t \parallel \text{XYZ:}(x,y,z) \parallel \text{CAD:}c\% \parallel \text{V:}v \parallel \text{ZONE:}z)
+$$
 
 ```
                                     MASTER MERKLE ROOT

@@ -89,7 +89,11 @@ All models are trained strictly on the 54 non-invasive features of the benchmark
 
 ### Strict Target Leakage Elimination Guarantee
 Post-catheterization angiography outcomes:
-$$\mathbf{Y}_{\text{target}} = [\text{Cath}, \text{LAD}, \text{LCX}, \text{RCA}, \text{CAD}]$$
+
+$$
+\mathbf{Y}_{\text{target}} = [\text{Cath}, \text{LAD}, \text{LCX}, \text{RCA}, \text{CAD}]
+$$
+
 are strictly purged from the input feature tensor $\mathbf{X}$. Pre-diagnostic inference relies exclusively on:
 - 17 Demographic & Medical History Variables (Age, Weight, BMI, DM, HTN, DLP, etc.)
 - 12 Symptoms & Physical Examination Signs (BP, PR, Chest Pain sub-types)
@@ -242,7 +246,9 @@ python -m streamlit run app.py --server.port 8502 --server.headless true
 ### 4.4 Zero-Knowledge Privacy & Merkle Tree (`zk_trust_layer.py`)
 - **Curve & Arithmetic Field:** Alt-BN128 / BN254 prime field ($p \approx 2.188 \times 10^{77}$).
 - **Rank-1 Constraint Systems (R1CS):** Enforces medical safety ceilings without exposing private biometric integers:
-  $$\text{Slack} = \text{Safety Ceil} - \text{Patient Metric} \ge 0$$
+  $$
+\text{Slack} = \text{Safety Ceil} - \text{Patient Metric} \ge 0
+$$
 - **Groth16 Pairing Simulation:** Generates $\pi_A \in \mathbb{G}_1, \pi_B \in \mathbb{G}_2, \pi_C \in \mathbb{G}_1$ with Fiat-Shamir heuristic transcript digest in $< 0.05\text{ ms}$ per proof.
 - **SHA-256 Merkle Prediction State Tree:** Anchors all 61 temporal prediction blocks. Post-computation coordinate tampering or probability alteration breaks the Merkle root hash.
 
